@@ -219,8 +219,22 @@ int main() {
         * fc7_relu(r_fc8.x);
     fc8(x) = s_fc8(x) + b_fc8(x);
     
+    // blob size (10, 1000)
+    // param size None
+    // input_size = (10, 1000)
+    RDom r_prob(0, 1000, "r_prob");
+    Func max_prob("max_prob");
+    max_prob(x) = 0.0f;
+    max_prob(0) = max(max_prob(0), fc8(r_prob));
+    Func centered_prob("centered_prob");
+    centered_prob(x) = fc8(x) - max_prob(0);
+    Func exp_prob("prob");
+    exp_prob(x) = exp(centered_prob(x)) ;
+    Func sum_prob("prob");
+    sum_prob(x) = 0.0f;
+    sum_prob(0) += exp_prob(r_prob);
     Func prob("prob");
-    prob(x) = fc8(x);
+    prob(x) = exp_prob(x)/sum_prob(0);
 
 
     //--- Schedule ---------------------------------------------
@@ -299,7 +313,16 @@ int main() {
 
     fc8.compute_root().parallel(x,parallel_sz).vectorize(x,vector_width);
 
-    prob.compute_root();
+    // blob size (10, 1000)
+    // param size None
+    // input_size = (10, 1000)
+    max_prob.compute_root();
+    sum_prob.compute_root();
+    prob
+        .compute_root()
+        .parallel(x,parallel_sz)
+        .vectorize(x,vector_width)
+    ;
 
 
     //--- Output -----------------------------------------------

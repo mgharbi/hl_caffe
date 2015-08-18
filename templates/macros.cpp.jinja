@@ -77,12 +77,28 @@
     {{node.name}}(x) = s_{{node.name}}(x) + b_{{node.name}}(x);
     {% endif -%}
 {% elif node.type == "Softmax" %}
+    // blob size {{node.bsize}}
+    // param size {{node.psize}}
+    // input_size = {{node.input[0].bsize}}
+    {% set sx = node.input[0].bsize[1] -%}
+    RDom r_{{node.name}}(0, {{sx}}, "r_{{node.name}}");
+    Func max_{{node.name}}("max_{{node.name}}");
+    max_{{node.name}}(x) = 0.0f;
+    max_{{node.name}}(0) = max(max_{{node.name}}(0), {{node.input[0].name}}(r_{{node.name}}));
+    Func centered_{{node.name}}("centered_{{node.name}}");
+    centered_{{node.name}}(x) = {{node.input[0].name}}(x) - max_{{node.name}}(0);
+    Func exp_{{node.name}}("{{node.name}}");
+    exp_{{node.name}}(x) = exp(centered_{{node.name}}(x)) ;
+    Func sum_{{node.name}}("{{node.name}}");
+    sum_{{node.name}}(x) = 0.0f;
+    sum_{{node.name}}(0) += exp_{{node.name}}(r_{{node.name}});
     Func {{node.name}}("{{node.name}}");
-    {{node.name}}(x) = {{node.input[0].name}}(x);
+    {{node.name}}(x) = exp_{{node.name}}(x)/sum_{{node.name}}(0);
 {% else %}
     JOE > {{node.name}} {{node.type}}
 {% endif -%}
 {%- endmacro -%}
+
 
 {% macro schedule(node) -%}
 {%- if node.type == "Convolution" %}
@@ -97,6 +113,18 @@
     {{node.name}}.compute_root().parallel(y,parallel_sz).vectorize(x,vector_width);
 {% elif node.type == "InnerProduct" %}
     {{node.name}}.compute_root().parallel(x,parallel_sz).vectorize(x,vector_width);
+{% elif node.type == "Softmax" %}
+    // blob size {{node.bsize}}
+    // param size {{node.psize}}
+    // input_size = {{node.input[0].bsize}}
+    {% set sx = node.input[0].bsize[1] -%}
+    max_{{node.name}}.compute_root();
+    sum_{{node.name}}.compute_root();
+    {{node.name}}
+        .compute_root()
+        .parallel(x,parallel_sz)
+        .vectorize(x,vector_width)
+    ;
 {% else %}
     {{node.name}}.compute_root();
 {% endif -%}

@@ -30,7 +30,7 @@ struct halide_filter_metadata_t;
 #ifdef __cplusplus
 extern "C" {
 #endif
-int hl_bvlc_alexnet(buffer_t *_data_buffer, buffer_t *_w_conv1_buffer, buffer_t *_b_conv1_buffer, buffer_t *_w_conv2_buffer, buffer_t *_b_conv2_buffer, buffer_t *_w_conv3_buffer, buffer_t *_b_conv3_buffer, buffer_t *_w_conv4_buffer, buffer_t *_b_conv4_buffer, buffer_t *_w_conv5_buffer, buffer_t *_b_conv5_buffer, buffer_t *_w_fc6_buffer, buffer_t *_b_fc6_buffer, buffer_t *_w_fc7_buffer, buffer_t *_b_fc7_buffer, buffer_t *_w_fc8_buffer, buffer_t *_b_fc8_buffer, buffer_t *_prob_buffer) HALIDE_FUNCTION_ATTRS;
+int hl_bvlc_alexnet(buffer_t *_data_buffer, buffer_t *_w_conv1_buffer, buffer_t *_b_conv1_buffer, buffer_t *_w_conv2_buffer, buffer_t *_b_conv2_buffer, buffer_t *_w_conv3_buffer, buffer_t *_b_conv3_buffer, buffer_t *_w_conv4_buffer, buffer_t *_b_conv4_buffer, buffer_t *_w_conv5_buffer, buffer_t *_b_conv5_buffer, buffer_t *_w_fc6_buffer, buffer_t *_b_fc6_buffer, buffer_t *_w_fc7_buffer, buffer_t *_b_fc7_buffer, buffer_t *_w_fc8_buffer, buffer_t *_b_fc8_buffer, buffer_t *_prob__3_buffer) HALIDE_FUNCTION_ATTRS;
 int hl_bvlc_alexnet_argv(void **args) HALIDE_FUNCTION_ATTRS;
 extern const struct halide_filter_metadata_t hl_bvlc_alexnet_metadata;
 #ifdef __cplusplus
