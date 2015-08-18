@@ -1,0 +1,43 @@
+{% import "macros.cpp.jinja" as macros -%}
+#include "gtest/gtest.h"
+#include "hl/hl_bvlc_alexnet.h"
+#include "halide_image.h"
+#include "halide_image_io.h"
+#include "timer.h"
+#include "log.h"
+#include "caffe_io.h"
+
+using namespace Halide::Tools;
+
+class ConvTest : public testing::Test
+{
+protected:
+    ConvTest() {};
+    virtual ~ConvTest () {};
+};
+
+TEST_F(ConvTest, simpleConvolution){
+    Image<float> input;
+    load("{{datadir}}/input.png", &input);
+    Image<float> output(1000);
+
+    {% for node in sequence -%}
+        {{macros.interface_load_input_param(node, datadir)}}
+    {%- endfor %}
+
+    auto start = get_time();
+    hl_bvlc_alexnet(
+        input
+    {% for node in sequence -%}
+        {{macros.interface_input_param(node)}}
+    {%- endfor %}
+    ,output);
+    PRINT("- simple convolution:\t %ldms\n", get_duration(start,get_time()));
+
+    save(output, "{{outdir}}/output.png");
+}
+
+GTEST_API_ int main(int argc, char **argv) {
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}

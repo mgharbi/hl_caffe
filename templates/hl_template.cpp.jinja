@@ -1,0 +1,51 @@
+{% import "macros.cpp.jinja" as macros -%}
+
+#include <Halide.h>
+
+using namespace Halide;
+
+
+int main() {
+    Var x("x"), y("y"), c("c"), t("t");
+    Var xo("xo"), yo("yo");
+    Var xi("xi"), yi("yi");
+    Var xy("xy");
+
+    //--- Input parameters -------------------------------------
+    ImageParam i_data(type_of<float>(), 3, "data");
+    Func data = BoundaryConditions::constant_exterior(i_data,0.0f);
+    {% for node in sequence -%}
+        {{macros.input_param(node)}}
+    {%- endfor %}
+
+    //--- Processing pipeline ----------------------------------
+    {% for node in sequence -%}
+        {{macros.func(node)}}
+    {%- endfor %}
+
+    //--- Schedule ---------------------------------------------
+    int parallel_sz = 1;
+    int vector_width = 16;
+    {% for node in sequence -%}
+        {{macros.schedule(node)}}
+    {%- endfor %}
+
+    //--- Output -----------------------------------------------
+    prob.compile_to_file("hl_bvlc_alexnet",
+        {i_data
+    {% for node in sequence -%}
+        {{macros.interface_input_param(node)}}
+    {%- endfor %}
+        }
+    );
+    prob.compile_to_lowered_stmt("hl_bvlc_alexnet.html",
+        {i_data
+    {% for node in sequence -%}
+        {{macros.interface_input_param(node)}}
+    {%- endfor %}
+        }, HTML
+    );
+
+    return 0;
+}
+
