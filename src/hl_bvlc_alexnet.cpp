@@ -112,17 +112,16 @@ int main() {
     
     s_conv2(x,y,c) += 
         select(
-    
+
             c >= 0 && c < 128,
                     w_conv2(r_conv2.x, r_conv2.y, r_conv2.z,c)
             * pool1(1*x+r_conv2.x-2,1*y+r_conv2.y-2,0+r_conv2.z),
-    
+
             c >= 128 && c < 256,
                     w_conv2(r_conv2.x, r_conv2.y, r_conv2.z,c)
             * pool1(1*x+r_conv2.x-2,1*y+r_conv2.y-2,48+r_conv2.z),
-    
+
         0.0f);
-    
         
     conv2(x,y,c) = s_conv2(x,y,c) + b_conv2(c);
 
@@ -337,32 +336,149 @@ int main() {
     int parallel_sz = 1;
     int vector_width = 16;
 
-    conv1.compute_root();
-    conv1_relu.compute_root();
-    norm1.compute_root();
-    pool1.compute_root();
-    conv2.compute_root();
-    conv2_relu.compute_root();
-    norm2.compute_root();
-    pool2.compute_root();
-    conv3.compute_root();
-    conv3_relu.compute_root();
-    conv4.compute_root();
-    conv4_relu.compute_root();
-    conv5.compute_root();
-    conv5_relu.compute_root();
-    pool5.compute_root();
-    fc6.compute_root();
-    fc6_relu.compute_root();
-    fc7.compute_root();
-    fc7_relu.compute_root();
-    fc8.compute_root();
-    max_prob.compute_root();
-    sum_prob.compute_root();
-    prob.compute_root();
+    s_conv1
+        .update()
+        .unroll(r_conv1.x)
+    ;
+    conv1
+        .compute_root()
+        .reorder(c,x,y)
+        .tile(x,y,xi,yi,8,8)
+        .fuse(x,y,xy)
+        .parallel(xy)
+        .vectorize(xi)
+    ;
+    conv1_relu
+        .compute_inline()
+    ;
+    norm1
+        .compute_root()
+        .reorder(c,x,y)
+        .tile(x,y,xi,yi,8,8)
+        .fuse(x,y,xy)
+        .parallel(xy)
+        .vectorize(xi)
+    ;
+    pool1
+        .compute_root()
+        .tile(x,y,xi,yi,8,8)
+        .fuse(x,y,xy)
+        .parallel(c)
+        .vectorize(xi)
+    ;
+    s_conv2
+        .update()
+        .unroll(r_conv2.x)
+    ;
+    conv2
+        .compute_root()
+        .parallel(c)
+        .vectorize(x,16)
+    ;
+    conv2_relu
+        .compute_inline()
+    ;
+    norm2
+        .compute_root()
+        .reorder(c,x,y)
+        .tile(x,y,xi,yi,8,8)
+        .fuse(x,y,xy)
+        .parallel(xy)
+        .vectorize(xi)
+    ;
+    pool2
+        .compute_root()
+        .parallel(c)
+        .vectorize(x,16)
+    ;
+    s_conv3
+        .update()
+        .unroll(r_conv3.x)
+        .unroll(r_conv3.y)
+    ;
+    conv3
+        .compute_root()
+        .parallel(c)
+        .vectorize(x,4)
+    ;
+    conv3_relu
+        .compute_inline()
+    ;
+    s_conv4
+        .update()
+        .unroll(r_conv4.x)
+    ;
+    conv4
+        .compute_root()
+        .parallel(c)
+        .vectorize(x,4)
+    ;
+    conv4_relu
+        .compute_inline()
+    ;
+    s_conv5
+        .update()
+        .unroll(r_conv5.x)
+    ;
+    conv5
+        .compute_root()
+        .parallel(c)
+        .vectorize(x,4)
+    ;
+    conv5_relu
+        .compute_inline()
+    ;
+    pool5
+        .compute_root()
+        .parallel(c)
+        .vectorize(x,4)
+    ;
+    s_fc6
+        .update()
+        .unroll(r_fc6.x)
+    ;
+    fc6
+        .compute_root()
+        .split(x,xo,xi,16)
+        .parallel(xo)
+        .vectorize(xi)
+    ;
+    fc6_relu.
+        compute_inline()
+    ;
+    s_fc7
+        .update()
+    ;
+    fc7
+        .compute_root()
+        .split(x,xo,xi,16)
+        .parallel(xo)
+        .vectorize(xi)
+    ;
+    fc7_relu.
+        compute_inline()
+    ;
+    fc8
+        .compute_root()
+        .split(x,xo,xi,16)
+        .parallel(xo)
+        .vectorize(xi)
+    ;
+    max_prob
+        .compute_root()
+    ;
+    sum_prob.
+        compute_root()
+    ;
+    prob
+        .compute_root()
+        .split(x,xo,xi,16)
+        .parallel(xo)
+        .vectorize(xi)
+    ;
 
     //--- Output -----------------------------------------------
-    prob.compile_to_file("hl_bvlc_alexnet",
+   prob.compile_to_file("hl_bvlc_alexnet",
         {i_data
     
     ,w_conv1,b_conv1
@@ -375,7 +491,7 @@ int main() {
     ,w_fc8,b_fc8
         }
     );
-    prob.compile_to_lowered_stmt("hl_bvlc_alexnet.html",
+   prob.compile_to_lowered_stmt("hl_bvlc_alexnet.html",
         {i_data
     
     ,w_conv1,b_conv1
@@ -388,6 +504,5 @@ int main() {
     ,w_fc8,b_fc8
         }, HTML
     );
-
     return 0;
 }

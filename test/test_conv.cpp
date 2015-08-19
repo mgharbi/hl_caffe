@@ -22,7 +22,7 @@ TEST_F(ConvTest, simpleConvolution){
     int h = 1;
     int c = 1;
     int extent = w;
-    Image<float> output(w);
+    Image<float> output(w,h,c);
     int shape[3] = {c,h,w};
 
     
