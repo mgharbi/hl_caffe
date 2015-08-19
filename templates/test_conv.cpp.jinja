@@ -19,7 +19,14 @@ protected:
 TEST_F(ConvTest, simpleConvolution){
     Image<float> input;
     load("{{datadir}}/input.png", &input);
-    Image<float> output(1000);
+    // Image<float> output(1000);
+
+    int w = 1000;
+    int h = 1;
+    int c = 1;
+    int extent = w;
+    Image<float> output(w);
+    int shape[3] = {c,h,w};
 
     {% for node in sequence -%}
         {{macros.interface_load_input_param(node, datadir)}}
@@ -34,6 +41,8 @@ TEST_F(ConvTest, simpleConvolution){
     ,output);
     PRINT("- simple convolution:\t %ldms\n", get_duration(start,get_time()));
 
+    SaveArrayAsNumpy("{{outdir}}/output.npy",
+            false, 3, shape, output.data());
     save(output, "{{outdir}}/output.png");
 }
 

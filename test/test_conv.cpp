@@ -18,7 +18,14 @@ protected:
 TEST_F(ConvTest, simpleConvolution){
     Image<float> input;
     load("/Users/mgharbi/Documents/projects/hl_caffe/data/bvlc_alexnet/input.png", &input);
-    Image<float> output(1000);
+    // Image<float> output(1000);
+
+    int w = 1000;
+    int h = 1;
+    int c = 1;
+    int extent = w;
+    Image<float> output(w);
+    int shape[3] = {c,h,w};
 
     
     Image<float> w_conv1 = load_net_params("/Users/mgharbi/Documents/projects/hl_caffe/data/bvlc_alexnet/params/w_conv1.npy");
@@ -61,6 +68,8 @@ TEST_F(ConvTest, simpleConvolution){
     ,output);
     PRINT("- simple convolution:\t %ldms\n", get_duration(start,get_time()));
 
+    SaveArrayAsNumpy("/Users/mgharbi/Documents/projects/hl_caffe/output/bvlc_alexnet/output.npy",
+            false, 3, shape, output.data());
     save(output, "/Users/mgharbi/Documents/projects/hl_caffe/output/bvlc_alexnet/output.png");
 }
 

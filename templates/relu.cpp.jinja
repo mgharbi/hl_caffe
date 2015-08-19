@@ -1,0 +1,13 @@
+{% macro func(node) -%}
+    // input_size = {{node.input[0].bsize}}
+    Func {{node.name}}("{{node.name}}");
+    {% if node.input[0].bsize | length == 4 -%}
+    {{node.name}}(x,y,c) = max({{node.input[0].name}}(x,y,c),0.0f);
+    {% else -%}
+    {{node.name}}(x) = max({{node.input[0].name}}(x),0.0f);
+    {% endif -%}
+{%- endmacro -%}
+
+
+{% macro schedule(node) -%}
+{%- endmacro -%}

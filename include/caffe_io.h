@@ -25,6 +25,7 @@ Image<float> load_net_params( const string& path )
         }
     }
 
+
     Image<float> out;
     if(shape[0]*shape[1]*shape[2]*shape[3] > 0) {
         out = Image<float>(shape[3], shape[2], shape[1], shape[0]);

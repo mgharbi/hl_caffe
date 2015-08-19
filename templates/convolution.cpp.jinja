@@ -1,0 +1,55 @@
+{% macro func(node) -%}
+    // {{node.name}}
+    // blob size {{node.bsize}}
+    // param size {{node.psize}}
+    // input_size = {{node.input[0].bsize}}
+    // groups = {{node.params["group"]}}
+    // stride = {{node.params["stride"]}}
+    // pad = {{node.params["pad"]}}
+    {% set kx = node.psize[3] -%}
+    {% set ky = node.psize[2] -%}
+    {% set nin = node.psize[1] -%}
+    {% set nout = node.psize[0] -%}
+    {% set stride = node.params["stride"] -%}
+    {% set pad = node.params["pad"] -%}
+    {% if pad == 0 -%}
+        {% set input = node.input[0].name -%} 
+    {% else -%}
+        {% set input = "clamped_"+node.name -%} 
+        Func {{input}}("{{input}}");
+        {{input}}(x,y,c) = select(
+            x >= 0 && x < {{node.input[0].bsize[3]}} &&
+            y >= 0 && y < {{node.input[0].bsize[2]}},
+            {{node.input[0].name}}(x,y,c), 0.0f);
+    {% endif %} 
+    Func {{node.name}}("{{node.name}}");
+    Func s_{{node.name}}("s_{{node.name}}");
+    RDom r_{{node.name}}(0,{{kx}}, 0, {{ky}}, 0, {{nin}}, "r_{{node.name}}");
+    s_{{node.name}}(x,y,c) = 0.0f;
+    {% if node.params['group'] == 1 %}
+    s_{{node.name}}(x,y,c) += w_{{node.name}}(r_{{node.name}}.x, r_{{node.name}}.y, r_{{node.name}}.z,c)
+            * {{input}}({{stride}}*x+r_{{node.name}}.x-{{pad}},{{stride}}*y+r_{{node.name}}.y-{{pad}},r_{{node.name}}.z),
+    {% else %}
+    {% set nout_g = (nout/node.params['group']) | int -%}
+    s_{{node.name}}(x,y,c) += 
+        select(
+    {% for g in range(node.params['group']) %}
+            c >= {{nout_g*(g)}} && c < {{nout_g*(g+1)}},
+                    w_{{node.name}}(r_{{node.name}}.x, r_{{node.name}}.y, r_{{node.name}}.z,c)
+            * {{input}}({{stride}}*x+r_{{node.name}}.x-{{pad}},{{stride}}*y+r_{{node.name}}.y-{{pad}},{{g*nin}}+r_{{node.name}}.z),
+    {% endfor %}
+        0.0f);
+    {% endif %}
+        
+    {{node.name}}(x,y,c) = s_{{node.name}}(x,y,c) + b_{{node.name}}(c);
+{%- endmacro -%}
+
+{% macro schedule(node) -%}
+    // s_{{node.name}}
+    //     .update()
+    //     .unroll(r_{{node.name}}.x)
+    //     .unroll(r_{{node.name}}.y)
+    //     .unroll(r_{{node.name}}.z)
+    //     ;
+    {{node.name}}.compute_root().parallel(y,parallel_sz).vectorize(x,vector_width);
+{%- endmacro -%}

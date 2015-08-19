@@ -1,130 +1,39 @@
+{% import "convolution.cpp.jinja" as conv -%}
+{% import "maxpooling.cpp.jinja" as maxpooling -%}
+{% import "innerproduct.cpp.jinja" as innerproduct -%}
+{% import "relu.cpp.jinja" as relu -%}
+{% import "softmax.cpp.jinja" as softmax -%}
+{% import "lrn.cpp.jinja" as lrn -%}
+
 {% macro func(node) -%}
 {%- if node.type == "Data" %}
 {%- elif node.type == "Convolution" %}
-    // {{node.name}}
-    // blob size {{node.bsize}}
-    // param size {{node.psize}}
-    // input_size = {{node.input[0].bsize}}
-    // groups = {{node.params["group"]}}
-    // stride = {{node.params["stride"]}}
-    // pad = {{node.params["pad"]}}
-    {% set kx = node.psize[3] -%}
-    {% set ky = node.psize[2] -%}
-    {% set nin = node.psize[1] -%}
-    {% set nout = node.psize[0] -%}
-    {% set stride = node.params["stride"] -%}
-    {% set pad = node.params["pad"] -%}
-    Func {{node.name}}("{{node.name}}");
-    Func s_{{node.name}}("s_{{node.name}}");
-    RDom r_{{node.name}}(0,{{kx}}, 0, {{ky}}, 0, {{nin}}, "r_{{node.name}}");
-    s_{{node.name}}(x,y,c) = 0.0f;
-    s_{{node.name}}(x,y,c) += w_{{node.name}}(r_{{node.name}}.x, r_{{node.name}}.y, r_{{node.name}}.z,c)
-        * {{node.input[0].name}}({{stride}}*x+r_{{node.name}}.x,{{stride}}*y+r_{{node.name}}.y,r_{{node.name}}.z);
-    {{node.name}}(x,y,c) = s_{{node.name}}(x,y,c) + b_{{node.name}}(c);
+    {{conv.func(node)}}
 {% elif node.type == "ReLU"%}
-    // input_size = {{node.input[0].bsize}}
-    Func {{node.name}}("{{node.name}}");
-    {% if node.input[0].bsize | length == 4 -%}
-    {{node.name}}(x,y,c) = max({{node.input[0].name}}(x,y,c),0.0f);
-    {% else -%}
-    {{node.name}}(x) = max({{node.input[0].name}}(x),0.0f);
-    {% endif -%}
+    {{relu.func(node)}}
 {% elif node.type == "LRN" %}
-    Func {{node.name}}("{{node.name}}");
-    {{node.name}}(x,y,c) = {{node.input[0].name}}(x,y,c);
+    {{lrn.func(node)}}
 {% elif node.type == "MaxPooling" %}
-    // blob size {{node.bsize}}
-    // input_size = {{node.input[0].bsize}}
-    // stride = {{node.params["stride"]}}
-    // ksize = {{node.params["kernel_size"]}}
-    {% set kx = node.params["kernel_size"] -%}
-    {% set ky = node.params["kernel_size"] -%}
-    {% set nin = node.psize[1] -%}
-    {% set nout = node.psize[0] -%}
-    {% set stride = node.params["stride"] -%}
-    {% set pad = node.params["pad"] -%}
-    Func {{node.name}}("{{node.name}}");
-    Func s_{{node.name}}("s_{{node.name}}");
-    RDom r_{{node.name}}(0,{{kx}}, 0, {{ky}}, "r_{{node.name}}");
-    s_{{node.name}}(x,y,c) = 0.0f;
-    s_{{node.name}}(x,y,c) = max(s_{{node.name}}(x,y,c), 
-        {{node.input[0].name}}({{stride}}*x+r_{{node.name}}.x,{{stride}}*y+r_{{node.name}}.y,c));
-    {{node.name}}(x,y,c) = s_{{node.name}}(x,y,c);
+    {{maxpooling.func(node)}}
 {% elif node.type == "InnerProduct" %}
-    // blob size {{node.bsize}}
-    // param size {{node.psize}}
-    // input_size = {{node.input[0].bsize}}
-    Func {{node.name}}("{{node.name}}");
-    {% if node.input[0].bsize | length == 4 -%}
-        {% set sx = node.input[0].bsize[3] -%}
-        {% set sy = node.input[0].bsize[2] -%}
-        {% set sz = node.input[0].bsize[1] -%}
-
-    Func s_{{node.name}}("s_{{node.name}}");
-    RDom r_{{node.name}}(0,{{sx}}, 0, {{sy}}, 0, {{sz}}, "r_{{node.name}}");
-    s_{{node.name}}(x) = 0.0f;
-    Expr cx_{{node.name}} = r_{{node.name}}.x + {{sx}}*r_{{node.name}}.y + {{sx}}*{{sy}}*r_{{node.name}}.z;
-    s_{{node.name}}(x) += w_{{node.name}}(cx_{{node.name}},x)
-        * {{node.input[0].name}}(r_{{node.name}}.x,r_{{node.name}}.y,r_{{node.name}}.z);
-    {{node.name}}(x) = s_{{node.name}}(x) + b_{{node.name}}(x);
-    {% else -%}
-    Func s_{{node.name}}("s_{{node.name}}");
-    {% set sx = node.input[0].bsize[1] -%}
-    RDom r_{{node.name}}(0,{{sx}});
-    s_{{node.name}}(x) = 0.0f;
-    s_{{node.name}}(x) += w_{{node.name}}(r_{{node.name}}.x,x)
-        * {{node.input[0].name}}(r_{{node.name}}.x);
-    {{node.name}}(x) = s_{{node.name}}(x) + b_{{node.name}}(x);
-    {% endif -%}
+    {{innerproduct.func(node)}}
 {% elif node.type == "Softmax" %}
-    // blob size {{node.bsize}}
-    // param size {{node.psize}}
-    // input_size = {{node.input[0].bsize}}
-    {% set sx = node.input[0].bsize[1] -%}
-    RDom r_{{node.name}}(0, {{sx}}, "r_{{node.name}}");
-    Func max_{{node.name}}("max_{{node.name}}");
-    max_{{node.name}}(x) = 0.0f;
-    max_{{node.name}}(0) = max(max_{{node.name}}(0), {{node.input[0].name}}(r_{{node.name}}));
-    Func centered_{{node.name}}("centered_{{node.name}}");
-    centered_{{node.name}}(x) = {{node.input[0].name}}(x) - max_{{node.name}}(0);
-    Func exp_{{node.name}}("{{node.name}}");
-    exp_{{node.name}}(x) = exp(centered_{{node.name}}(x)) ;
-    Func sum_{{node.name}}("{{node.name}}");
-    sum_{{node.name}}(x) = 0.0f;
-    sum_{{node.name}}(0) += exp_{{node.name}}(r_{{node.name}});
-    Func {{node.name}}("{{node.name}}");
-    {{node.name}}(x) = exp_{{node.name}}(x)/sum_{{node.name}}(0);
+    {{softmax.func(node)}}
 {% else %}
-    JOE > {{node.name}} {{node.type}}
+    NOT IMPLEMENTED > {{node.name}} {{node.type}}
 {% endif -%}
 {%- endmacro -%}
 
 
 {% macro schedule(node) -%}
 {%- if node.type == "Convolution" %}
-    // s_{{node.name}}
-    //     .update()
-    //     .unroll(r_{{node.name}}.x)
-    //     .unroll(r_{{node.name}}.y)
-    //     .unroll(r_{{node.name}}.z)
-    //     ;
-    {{node.name}}.compute_root().parallel(y,parallel_sz).vectorize(x,vector_width);
+    {{ conv.schedule(node) }}
 {% elif node.type == "MaxPooling" %}
-    {{node.name}}.compute_root().parallel(y,parallel_sz).vectorize(x,vector_width);
+    {{ maxpooling.schedule(node) }}
 {% elif node.type == "InnerProduct" %}
-    {{node.name}}.compute_root().parallel(x,parallel_sz).vectorize(x,vector_width);
+    {{ innerproduct.schedule(node) }}
 {% elif node.type == "Softmax" %}
-    // blob size {{node.bsize}}
-    // param size {{node.psize}}
-    // input_size = {{node.input[0].bsize}}
-    {% set sx = node.input[0].bsize[1] -%}
-    max_{{node.name}}.compute_root();
-    sum_{{node.name}}.compute_root();
-    {{node.name}}
-        .compute_root()
-        .parallel(x,parallel_sz)
-        .vectorize(x,vector_width)
-    ;
+    {{softmax.schedule(node)}}
 {% else %}
     {{node.name}}.compute_root();
 {% endif -%}

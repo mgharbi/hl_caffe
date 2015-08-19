@@ -1,0 +1,30 @@
+{% macro func(node) -%}
+    // input_size = {{node.input[0].bsize}}
+    // alpha = {{node.params['alpha']}}
+    // beta = {{node.params['beta']}}
+    // local_size = {{node.params['local_size']}}
+    {% set alpha = node.params['alpha'] -%}
+    {% set beta = node.params['beta'] -%}
+    {% set local_size = node.params['local_size'] -%}
+    {% set alpha_local = alpha/local_size -%}
+    Func {{node.name}}("{{node.name}}");
+    RDom r_{{node.name}}(0,{{local_size}});
+    Func c_{{node.name}}("c_{{node.name}}");
+    c_{{node.name}}(x,y,c) = select(
+        c >= 0 && c < {{node.input[0].bsize[1]}},
+        {{node.input[0].name}}(x,y,clamp(c, 0,{{node.input[0].bsize[1]-1}})),
+        0.0f
+    );
+    Func scale_{{node.name}}("scale_{{node.name}}");
+    scale_{{node.name}}(x,y,c) = 1.0f;
+    scale_{{node.name}}(x,y,c) += 
+        {{alpha_local}}f *
+        c_{{node.name}}(x,y,c+r_{{node.name}}-{{(local_size/2) | int}}) *
+        c_{{node.name}}(x,y,c+r_{{node.name}}-{{(local_size/2) | int}});
+
+    {{node.name}}(x,y,c) = {{node.input[0].name}}(x,y,c)*pow(scale_{{node.name}}(x,y,c),-{{beta}}f);
+{%- endmacro -%}
+
+
+{% macro schedule(node) -%}
+{%- endmacro -%}

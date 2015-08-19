@@ -1,0 +1,32 @@
+{% macro func(node) -%}
+    // blob size {{node.bsize}}
+    // param size {{node.psize}}
+    // input_size = {{node.input[0].bsize}}
+    Func {{node.name}}("{{node.name}}");
+    {% if node.input[0].bsize | length == 4 -%}
+        {% set sx = node.input[0].bsize[3] -%}
+        {% set sy = node.input[0].bsize[2] -%}
+        {% set sz = node.input[0].bsize[1] -%}
+
+    Func s_{{node.name}}("s_{{node.name}}");
+    RDom r_{{node.name}}(0,{{sx}}, 0, {{sy}}, 0, {{sz}}, "r_{{node.name}}");
+    s_{{node.name}}(x) = 0.0f;
+    Expr cx_{{node.name}} = r_{{node.name}}.x + {{sx}}*r_{{node.name}}.y + {{sx}}*{{sy}}*r_{{node.name}}.z;
+    s_{{node.name}}(x) += w_{{node.name}}(cx_{{node.name}},x)
+        * {{node.input[0].name}}(r_{{node.name}}.x,r_{{node.name}}.y,r_{{node.name}}.z);
+    {{node.name}}(x) = s_{{node.name}}(x) + b_{{node.name}}(x);
+    {% else -%}
+    Func s_{{node.name}}("s_{{node.name}}");
+    {% set sx = node.input[0].bsize[1] -%}
+    RDom r_{{node.name}}(0,{{sx}});
+    s_{{node.name}}(x) = 0.0f;
+    s_{{node.name}}(x) += w_{{node.name}}(r_{{node.name}}.x,x)
+        * {{node.input[0].name}}(r_{{node.name}}.x);
+    {{node.name}}(x) = s_{{node.name}}(x) + b_{{node.name}}(x);
+    {% endif -%}
+{%- endmacro -%}
+
+
+{% macro schedule(node) -%}
+    {{node.name}}.compute_root().parallel(x,parallel_sz).vectorize(x,vector_width);
+{%- endmacro -%}

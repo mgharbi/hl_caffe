@@ -1,0 +1,24 @@
+{% macro func(node) -%}
+    // blob size {{node.bsize}}
+    // input_size = {{node.input[0].bsize}}
+    // stride = {{node.params["stride"]}}
+    // ksize = {{node.params["kernel_size"]}}
+    {% set kx = node.params["kernel_size"] -%}
+    {% set ky = node.params["kernel_size"] -%}
+    {% set nin = node.psize[1] -%}
+    {% set nout = node.psize[0] -%}
+    {% set stride = node.params["stride"] -%}
+    {% set pad = node.params["pad"] -%}
+    Func {{node.name}}("{{node.name}}");
+    Func s_{{node.name}}("s_{{node.name}}");
+    RDom r_{{node.name}}(0,{{kx}}, 0, {{ky}}, "r_{{node.name}}");
+    s_{{node.name}}(x,y,c) = 0.0f;
+    s_{{node.name}}(x,y,c) = max(s_{{node.name}}(x,y,c), 
+        {{node.input[0].name}}({{stride}}*x+r_{{node.name}}.x,{{stride}}*y+r_{{node.name}}.y,c));
+    {{node.name}}(x,y,c) = s_{{node.name}}(x,y,c);
+{%- endmacro -%}
+
+
+{% macro schedule(node) -%}
+    {{node.name}}.compute_root();
+{%- endmacro -%}
