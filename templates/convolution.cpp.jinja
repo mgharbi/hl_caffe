@@ -12,6 +12,9 @@
     {% set nout = node.psize[0] -%}
     {% set stride = node.params["stride"] -%}
     {% set pad = node.params["pad"] -%}
+    {% set input = node.input[0].name -%} 
+
+{# Valid caffe 0 boundary conditions
     {% if pad == 0 -%}
         {% set input = node.input[0].name -%} 
     {% else -%}
@@ -22,6 +25,7 @@
             y >= 0 && y < {{node.input[0].bsize[2]}},
             {{node.input[0].name}}(x,y,c), 0.0f);
     {% endif %} 
+#}
     Func {{node.name}}("{{node.name}}");
     Func s_{{node.name}}("s_{{node.name}}");
     RDom r_{{node.name}}(0,{{kx}}, 0, {{ky}}, 0, {{nin}}, "r_{{node.name}}");
@@ -45,11 +49,5 @@
 {%- endmacro -%}
 
 {% macro schedule(node) -%}
-    // s_{{node.name}}
-    //     .update()
-    //     .unroll(r_{{node.name}}.x)
-    //     .unroll(r_{{node.name}}.y)
-    //     .unroll(r_{{node.name}}.z)
-    //     ;
     {{node.name}}.compute_root().parallel(y,parallel_sz).vectorize(x,vector_width);
 {%- endmacro -%}

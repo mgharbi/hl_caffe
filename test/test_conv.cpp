@@ -18,8 +18,6 @@ protected:
 TEST_F(ConvTest, simpleConvolution){
     Image<float> input;
     load("/Users/mgharbi/Documents/projects/hl_caffe/data/bvlc_alexnet/input.png", &input);
-    // Image<float> output(1000);
-
     int w = 1000;
     int h = 1;
     int c = 1;

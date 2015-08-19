@@ -38,13 +38,13 @@ int main() {
     {%- endfor %}
         }
     );
-    {# prob.compile_to_lowered_stmt("hl_bvlc_alexnet.html",
+    prob.compile_to_lowered_stmt("hl_bvlc_alexnet.html",
         {i_data
     {% for node in sequence -%}
         {{macros.interface_input_param(node)}}
     {%- endfor %}
         }, HTML
-    ); #}
+    );
 
     return 0;
 }

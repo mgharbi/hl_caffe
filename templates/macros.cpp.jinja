@@ -34,6 +34,8 @@
     {{ innerproduct.schedule(node) }}
 {% elif node.type == "Softmax" %}
     {{softmax.schedule(node)}}
+{% elif node.type == "LRN" %}
+    {{lrn.schedule(node)}}
 {% else %}
     {{node.name}}.compute_root();
 {% endif -%}

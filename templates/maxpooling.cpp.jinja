@@ -20,5 +20,5 @@
 
 
 {% macro schedule(node) -%}
-    {{node.name}}.compute_root();
+    {{node.name}}.compute_root().parallel(y,parallel_sz).vectorize(x,vector_width);
 {%- endmacro -%}

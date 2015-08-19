@@ -47,7 +47,7 @@ int main() {
     // groups = 1
     // stride = 4
     // pad = 0
-     
+    
     Func conv1("conv1");
     Func s_conv1("s_conv1");
     RDom r_conv1(0,11, 0, 11, 0, 3, "r_conv1");
@@ -104,12 +104,7 @@ int main() {
     // groups = 2
     // stride = 1
     // pad = 2
-    Func clamped_conv2("clamped_conv2");
-        clamped_conv2(x,y,c) = select(
-            x >= 0 && x < 27 &&
-            y >= 0 && y < 27,
-            pool1(x,y,c), 0.0f);
-     
+    
     Func conv2("conv2");
     Func s_conv2("s_conv2");
     RDom r_conv2(0,5, 0, 5, 0, 48, "r_conv2");
@@ -120,11 +115,11 @@ int main() {
     
             c >= 0 && c < 128,
                     w_conv2(r_conv2.x, r_conv2.y, r_conv2.z,c)
-            * clamped_conv2(1*x+r_conv2.x-2,1*y+r_conv2.y-2,0+r_conv2.z),
+            * pool1(1*x+r_conv2.x-2,1*y+r_conv2.y-2,0+r_conv2.z),
     
             c >= 128 && c < 256,
                     w_conv2(r_conv2.x, r_conv2.y, r_conv2.z,c)
-            * clamped_conv2(1*x+r_conv2.x-2,1*y+r_conv2.y-2,48+r_conv2.z),
+            * pool1(1*x+r_conv2.x-2,1*y+r_conv2.y-2,48+r_conv2.z),
     
         0.0f);
     
@@ -176,19 +171,14 @@ int main() {
     // groups = 1
     // stride = 1
     // pad = 1
-    Func clamped_conv3("clamped_conv3");
-        clamped_conv3(x,y,c) = select(
-            x >= 0 && x < 13 &&
-            y >= 0 && y < 13,
-            pool2(x,y,c), 0.0f);
-     
+    
     Func conv3("conv3");
     Func s_conv3("s_conv3");
     RDom r_conv3(0,3, 0, 3, 0, 256, "r_conv3");
     s_conv3(x,y,c) = 0.0f;
     
     s_conv3(x,y,c) += w_conv3(r_conv3.x, r_conv3.y, r_conv3.z,c)
-            * clamped_conv3(1*x+r_conv3.x-1,1*y+r_conv3.y-1,r_conv3.z),
+            * pool2(1*x+r_conv3.x-1,1*y+r_conv3.y-1,r_conv3.z),
     
         
     conv3(x,y,c) = s_conv3(x,y,c) + b_conv3(c);
@@ -205,12 +195,7 @@ int main() {
     // groups = 2
     // stride = 1
     // pad = 1
-    Func clamped_conv4("clamped_conv4");
-        clamped_conv4(x,y,c) = select(
-            x >= 0 && x < 13 &&
-            y >= 0 && y < 13,
-            conv3_relu(x,y,c), 0.0f);
-     
+    
     Func conv4("conv4");
     Func s_conv4("s_conv4");
     RDom r_conv4(0,3, 0, 3, 0, 192, "r_conv4");
@@ -221,11 +206,11 @@ int main() {
     
             c >= 0 && c < 192,
                     w_conv4(r_conv4.x, r_conv4.y, r_conv4.z,c)
-            * clamped_conv4(1*x+r_conv4.x-1,1*y+r_conv4.y-1,0+r_conv4.z),
+            * conv3_relu(1*x+r_conv4.x-1,1*y+r_conv4.y-1,0+r_conv4.z),
     
             c >= 192 && c < 384,
                     w_conv4(r_conv4.x, r_conv4.y, r_conv4.z,c)
-            * clamped_conv4(1*x+r_conv4.x-1,1*y+r_conv4.y-1,192+r_conv4.z),
+            * conv3_relu(1*x+r_conv4.x-1,1*y+r_conv4.y-1,192+r_conv4.z),
     
         0.0f);
     
@@ -244,12 +229,7 @@ int main() {
     // groups = 2
     // stride = 1
     // pad = 1
-    Func clamped_conv5("clamped_conv5");
-        clamped_conv5(x,y,c) = select(
-            x >= 0 && x < 13 &&
-            y >= 0 && y < 13,
-            conv4_relu(x,y,c), 0.0f);
-     
+    
     Func conv5("conv5");
     Func s_conv5("s_conv5");
     RDom r_conv5(0,3, 0, 3, 0, 192, "r_conv5");
@@ -260,11 +240,11 @@ int main() {
     
             c >= 0 && c < 128,
                     w_conv5(r_conv5.x, r_conv5.y, r_conv5.z,c)
-            * clamped_conv5(1*x+r_conv5.x-1,1*y+r_conv5.y-1,0+r_conv5.z),
+            * conv4_relu(1*x+r_conv5.x-1,1*y+r_conv5.y-1,0+r_conv5.z),
     
             c >= 128 && c < 256,
                     w_conv5(r_conv5.x, r_conv5.y, r_conv5.z,c)
-            * clamped_conv5(1*x+r_conv5.x-1,1*y+r_conv5.y-1,192+r_conv5.z),
+            * conv4_relu(1*x+r_conv5.x-1,1*y+r_conv5.y-1,192+r_conv5.z),
     
         0.0f);
     
@@ -356,90 +336,30 @@ int main() {
     //--- Schedule ---------------------------------------------
     int parallel_sz = 1;
     int vector_width = 16;
-    
-    data.compute_root();
 
-    // s_conv1
-    //     .update()
-    //     .unroll(r_conv1.x)
-    //     .unroll(r_conv1.y)
-    //     .unroll(r_conv1.z)
-    //     ;
-    conv1.compute_root().parallel(y,parallel_sz).vectorize(x,vector_width);
-
+    conv1.compute_root();
     conv1_relu.compute_root();
-
     norm1.compute_root();
-
     pool1.compute_root();
-
-    // s_conv2
-    //     .update()
-    //     .unroll(r_conv2.x)
-    //     .unroll(r_conv2.y)
-    //     .unroll(r_conv2.z)
-    //     ;
-    conv2.compute_root().parallel(y,parallel_sz).vectorize(x,vector_width);
-
+    conv2.compute_root();
     conv2_relu.compute_root();
-
     norm2.compute_root();
-
     pool2.compute_root();
-
-    // s_conv3
-    //     .update()
-    //     .unroll(r_conv3.x)
-    //     .unroll(r_conv3.y)
-    //     .unroll(r_conv3.z)
-    //     ;
-    conv3.compute_root().parallel(y,parallel_sz).vectorize(x,vector_width);
-
+    conv3.compute_root();
     conv3_relu.compute_root();
-
-    // s_conv4
-    //     .update()
-    //     .unroll(r_conv4.x)
-    //     .unroll(r_conv4.y)
-    //     .unroll(r_conv4.z)
-    //     ;
-    conv4.compute_root().parallel(y,parallel_sz).vectorize(x,vector_width);
-
+    conv4.compute_root();
     conv4_relu.compute_root();
-
-    // s_conv5
-    //     .update()
-    //     .unroll(r_conv5.x)
-    //     .unroll(r_conv5.y)
-    //     .unroll(r_conv5.z)
-    //     ;
-    conv5.compute_root().parallel(y,parallel_sz).vectorize(x,vector_width);
-
+    conv5.compute_root();
     conv5_relu.compute_root();
-
     pool5.compute_root();
-
-    fc6.compute_root().parallel(x,parallel_sz).vectorize(x,vector_width);
-
+    fc6.compute_root();
     fc6_relu.compute_root();
-
-    fc7.compute_root().parallel(x,parallel_sz).vectorize(x,vector_width);
-
+    fc7.compute_root();
     fc7_relu.compute_root();
-
-    fc8.compute_root().parallel(x,parallel_sz).vectorize(x,vector_width);
-
-    // blob size (1, 1000)
-    // param size None
-    // input_size = (1, 1000)
+    fc8.compute_root();
     max_prob.compute_root();
     sum_prob.compute_root();
-    prob
-        .compute_root()
-        .parallel(x,parallel_sz)
-        .vectorize(x,vector_width)
-    ;
-
+    prob.compute_root();
 
     //--- Output -----------------------------------------------
     prob.compile_to_file("hl_bvlc_alexnet",
@@ -455,7 +375,19 @@ int main() {
     ,w_fc8,b_fc8
         }
     );
+    prob.compile_to_lowered_stmt("hl_bvlc_alexnet.html",
+        {i_data
     
+    ,w_conv1,b_conv1
+    ,w_conv2,b_conv2
+    ,w_conv3,b_conv3
+    ,w_conv4,b_conv4
+    ,w_conv5,b_conv5
+    ,w_fc6,b_fc6
+    ,w_fc7,b_fc7
+    ,w_fc8,b_fc8
+        }, HTML
+    );
 
     return 0;
 }
